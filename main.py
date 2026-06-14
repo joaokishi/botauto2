@@ -27,9 +27,9 @@ logging.basicConfig(
 TARGET_GROUPS = ["ofertasepromoaquibr", "TJGOFERTASs", "promomarks", "pobregram", "urubupromo", "ofertagpu"]
 
 GPU_RULES = [
-    {"keywords": ("9060xt 16gb", "9060 xt 16gb, 9060xt 16 gb, 9060 xt 16 gb"), "name": "9060 XT", "min": 1400, "max": 4000},
-    {"keywords": ("5060"), "name": "5060", "min": 1200, "max": 3500},
-    {"keywords": ("5060ti 16gb, 5060 ti 16gb, 5060ti 16 gb, 5060 ti 16 gb,"), "name": "5060", "min": 1400, "max": 4500}
+    {"keywords": ("9060xt 16gb", "9060 xt 16gb", "9060xt 16 gb", "9060 xt 16 gb"), "name": "9060 XT", "min": 1400, "max": 4000},
+    {"keywords": ("5060",), "name": "5060", "min": 1200, "max": 3500},
+    {"keywords": ("5060ti 16gb", "5060 ti 16gb", "5060ti 16 gb", "5060 ti 16 gb"), "name": "5060 TI 16GB", "min": 1400, "max": 4500}
 ]
 
 PROMO_LAYOUT = SheetLayout("Promocoes", ["Data e Hora", "Grupo", "Mensagem", "Produto", "Preco", "Link"])
@@ -148,20 +148,24 @@ class PromotionBot:
         self.store.ensure_layouts([PROMO_LAYOUT, SUMMARY_LAYOUT])
 
     def find_matches(self, message_text: str) -> list[MatchResult]:
-        message_lower = message_text.lower()
-        price_match = re.search(r"r\$\s*\d+(?:[\.,]\d+)*", message_lower)
-        if not price_match:
-            return []
-
-        price = extract_price(price_match.group(0))
-        if price <= 0:
-            return []
-
         matches: list[MatchResult] = []
 
-        for rule in GPU_RULES:
-            if keyword_matches(message_text, rule["keywords"]) and rule["min"] <= price <= rule["max"]:
-                matches.append(MatchResult("gpu", rule["name"], price))
+        for line in message_text.splitlines():
+            line_lower = line.lower().strip()
+            if not line_lower:
+                continue
+
+            price_match = re.search(r"r\$\s*\d+(?:[\.,]\d+)*", line_lower)
+            if not price_match:
+                continue
+
+            price = extract_price(price_match.group(0))
+            if price <= 0:
+                continue
+
+            for rule in GPU_RULES:
+                if keyword_matches(line_lower, rule["keywords"]) and rule["min"] <= price <= rule["max"]:
+                    matches.append(MatchResult("gpu", rule["name"], price))
 
         return matches
 
