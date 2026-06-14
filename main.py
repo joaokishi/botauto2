@@ -27,9 +27,9 @@ logging.basicConfig(
 TARGET_GROUPS = ["ofertasepromoaquibr", "TJGOFERTASs", "promomarks", "pobregram", "urubupromo", "ofertagpu"]
 
 GPU_RULES = [
-    {"keywords": ("9060xt 16gb", "9060 xt 16gb, 9060xt 16 gb, 9060 xt 16 gb"), "name": "9060 XT", "min": 1000, "max": 6000},
-    {"keywords": ("5060"), "name": "5060", "min": 1000, "max": 4500},
-    {"keywords": ("5060ti 16gb, 5060 ti 16gb, 5060ti 16 gb, 5060 ti 16 gb,"), "name": "5060", "min": 1000, "max": 4500}
+    {"keywords": ("9060xt 16gb", "9060 xt 16gb, 9060xt 16 gb, 9060 xt 16 gb"), "name": "9060 XT", "min": 1400, "max": 4000},
+    {"keywords": ("5060"), "name": "5060", "min": 1200, "max": 3500},
+    {"keywords": ("5060ti 16gb, 5060 ti 16gb, 5060ti 16 gb, 5060 ti 16 gb,"), "name": "5060", "min": 1400, "max": 4500}
 ]
 
 PROMO_LAYOUT = SheetLayout("Promocoes", ["Data e Hora", "Grupo", "Mensagem", "Produto", "Preco", "Link"])
