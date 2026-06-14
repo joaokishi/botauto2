@@ -27,18 +27,13 @@ logging.basicConfig(
 TARGET_GROUPS = ["ofertasepromoaquibr", "TJGOFERTASs", "promomarks", "pobregram", "urubupromo", "ofertagpu"]
 
 GPU_RULES = [
-    {"keywords": ("9060xt", "9060 xt"), "name": "9060 XT", "min": 1000, "max": 6000},
-    {"keywords": ("5060",), "name": "5060", "min": 1000, "max": 4500},
-]
-
-MONITOR_RULES = [
-    {"keywords": ("monitor",), "name": "Monitor", "min": 300, "max": 8000},
+    {"keywords": ("9060xt 16gb", "9060 xt 16gb, 9060xt 16 gb, 9060 xt 16 gb"), "name": "9060 XT", "min": 1000, "max": 6000},
+    {"keywords": ("5060"), "name": "5060", "min": 1000, "max": 4500},
+    {"keywords": ("5060ti 16gb, 5060 ti 16gb, 5060ti 16 gb, 5060 ti 16 gb,"), "name": "5060", "min": 1000, "max": 4500}
 ]
 
 PROMO_LAYOUT = SheetLayout("Promocoes", ["Data e Hora", "Grupo", "Mensagem", "Produto", "Preco", "Link"])
 SUMMARY_LAYOUT = SheetLayout("Resumo Diario", ["Data", "Produto", "Menor Preco", "Preco Medio", "Total de Ofertas"])
-MONITOR_LAYOUT = SheetLayout("Monitores", ["Data e Hora", "Grupo", "Mensagem", "Produto", "Tamanho", "Frequencia", "Preco", "Link"])
-MONITOR_SUMMARY_LAYOUT = SheetLayout("Resumo Monitores", ["Data", "Produto", "Menor Preco", "Preco Medio", "Total de Ofertas"])
 
 
 def clean_value(value: str | None) -> str:
@@ -106,14 +101,6 @@ def get_group_name(chat, fallback: str) -> str:
     return username or fallback
 
 
-def parse_monitor_details(message_text: str) -> tuple[str, str]:
-    size_match = re.search(r"(\d{2})\s*(?:\"|”|polegadas|pol|inch)", message_text.lower())
-    freq_match = re.search(r"(\d{2,3})\s*(?:hz)", message_text.lower())
-
-    size = f'{size_match.group(1)}"' if size_match else "N/D"
-    frequency = f"{freq_match.group(1)}Hz" if freq_match else "N/D"
-    return size, frequency
-
 
 def send_telegram_alert(token: str | None, user_id: str | None, message: str) -> None:
     if not token or not user_id:
@@ -140,7 +127,6 @@ class MatchResult:
     category: str
     product_name: str
     price: float
-    extra: tuple[str, ...] = ()
 
 
 class PromotionBot:
@@ -159,7 +145,7 @@ class PromotionBot:
             service_account_file=self.service_account_file,
             service_account_json=self.service_account_json,
         )
-        self.store.ensure_layouts([PROMO_LAYOUT, SUMMARY_LAYOUT, MONITOR_LAYOUT, MONITOR_SUMMARY_LAYOUT])
+        self.store.ensure_layouts([PROMO_LAYOUT, SUMMARY_LAYOUT])
 
     def find_matches(self, message_text: str) -> list[MatchResult]:
         message_lower = message_text.lower()
@@ -177,40 +163,18 @@ class PromotionBot:
             if keyword_matches(message_text, rule["keywords"]) and rule["min"] <= price <= rule["max"]:
                 matches.append(MatchResult("gpu", rule["name"], price))
 
-        for rule in MONITOR_RULES:
-            if keyword_matches(message_text, rule["keywords"]) and rule["min"] <= price <= rule["max"]:
-                size, frequency = parse_monitor_details(message_text)
-                product_name = f"Monitor {size} {frequency}".replace("N/D", "").strip()
-                if not product_name:
-                    product_name = "Monitor (Geral)"
-                matches.append(MatchResult("monitor", product_name, price, (size, frequency)))
-
         return matches
 
     def save_match(self, match: MatchResult, message_text: str, group_name: str, timestamp: str, link: str) -> None:
         day = timestamp.split(" ")[0]
 
-        if match.category == "gpu":
-            self.store.append_row("Promocoes", [timestamp, group_name, message_text, match.product_name, match.price, link])
-            self.store.upsert_daily_summary("Resumo Diario", day, match.product_name, match.price)
-        elif match.category == "monitor":
-            size, frequency = match.extra if len(match.extra) == 2 else ("N/D", "N/D")
-            self.store.append_row("Monitores", [timestamp, group_name, message_text, match.product_name, size, frequency, match.price, link])
-            self.store.upsert_daily_summary("Resumo Monitores", day, match.product_name, match.price)
+        self.store.append_row("Promocoes", [timestamp, group_name, message_text, match.product_name, match.price, link])
+        self.store.upsert_daily_summary("Resumo Diario", day, match.product_name, match.price)
 
     def format_alert(self, match: MatchResult, group_name: str, link: str) -> str:
-        if match.category == "gpu":
-            return (
-                "🔥 <b>ALERTA DE PRECO BAIXO (GPU)</b> 🔥\n\n"
-                f"🎮 <b>Produto:</b> {match.product_name}\n"
-                f"💰 <b>Valor:</b> R$ {match.price:.2f}\n"
-                f"📍 <b>Grupo:</b> {group_name}\n\n"
-                f"🔗 <a href='{link}'>🛒 Ver Oferta</a>"
-            )
-
         return (
-            "🖥️ <b>ALERTA DE PRECO BAIXO (MONITOR)</b> 🖥️\n\n"
-            f"📺 <b>Produto:</b> {match.product_name}\n"
+            "🔥 <b>ALERTA DE PRECO BAIXO (GPU)</b> 🔥\n\n"
+            f"🎮 <b>Produto:</b> {match.product_name}\n"
             f"💰 <b>Valor:</b> R$ {match.price:.2f}\n"
             f"📍 <b>Grupo:</b> {group_name}\n\n"
             f"🔗 <a href='{link}'>🛒 Ver Oferta</a>"
